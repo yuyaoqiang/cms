@@ -1,0 +1,23 @@
+html,
+body,
+#root {
+    height: 100%;
+}
+body {
+    margin: 0;
+}
+.readonly-form {
+    @apply mb-5;
+}
+.readonly-form .ant-form-item {
+    margin-bottom: 0 !important;
+}
+.ant-layout-content {
+    @apply p-6 !important;
+}
+.ant-drawer-content {
+    background: #fff !important;
+}
+.ant-form-item-control-input-content .ant-space-compact {
+    width: 100%;
+}
