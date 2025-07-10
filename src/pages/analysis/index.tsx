@@ -14,7 +14,7 @@ import {
 } from '@ant-design/pro-form'
 import { Layout, Button, Tag, Table, message, Spin } from 'antd'
 import dayjs from 'dayjs'
-import { FC, useState, useEffect, useMemo } from 'react'
+import { FC, useState, useEffect, useMemo, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 
 // 标签类型定义
@@ -40,8 +40,7 @@ export interface UserTagDefinition {
     name: string
     type: TagType
     definition?: string
-    options?: string[]
-    apiData?: ApiTagItem
+    apiData: ApiTagItem
     dynamicOptions?: { label: string; value: string }[] // 动态获取的选项
 }
 
@@ -64,45 +63,11 @@ interface TagAnalysisData {
 
 // widgetType 到 TagType 的映射
 const WIDGET_TYPE_MAP: Record<number, TagType> = {
-    1: 'multi', // 多选
+    1: 'multi', // 复选框
     2: 'single', // 单选
-    3: 'dateRange', // 日期范围
-    4: 'numberRange', // 数值范围
-    5: 'numberRange' // 数值范围
-}
-
-// 为不同类型的标签提供默认选项（当API无数据时的兜底）
-const getDefaultOptions = (type: TagType, fieldName: string): string[] => {
-    switch (type) {
-        case 'single':
-            if (fieldName.includes('sex') || fieldName.includes('gender')) {
-                return ['男', '女']
-            }
-            if (
-                fieldName.includes('black') ||
-                fieldName.includes('grey') ||
-                fieldName.includes('active') ||
-                fieldName.includes('reg7pay')
-            ) {
-                return ['是', '否']
-            }
-            return ['选项1', '选项2']
-
-        case 'multi':
-            if (fieldName.includes('source')) {
-                return ['直客', '代理']
-            }
-            if (fieldName.includes('site_type')) {
-                return ['S', 'K']
-            }
-            if (fieldName.includes('device')) {
-                return ['iOS', 'Android', 'Windows']
-            }
-            return ['选项1', '选项2', '选项3']
-
-        default:
-            return []
-    }
+    3: 'dateRange', // 时间区间
+    4: 'numberRange', // 正整数区间
+    5: 'numberRange' // 正负整数区间
 }
 
 // 根据字段名生成标签定义说明
@@ -124,7 +89,10 @@ const getTagDefinition = (fieldName: string, labelName: string): string => {
         '30_day_gold_coin': '会员近 30 日打赏的金币总额',
         member_tags: '会员标签管理中业务大的标签类型',
         is_7_active: '会员近7日有过登陆即为活跃',
-        device_infos: '会员近30日登陆设备枚举（系统版本）'
+        device_infos: '会员近30日登陆设备枚举（系统版本）',
+        warn_count: '过往1年风控预警次数',
+        is_black: '该账号手机号或设备与黑名单重合即为黑名单用户',
+        is_grey: '该账号手机号或设备与灰名单重合即为灰名单用户'
     }
 
     return definitionMap[fieldName] || `${labelName}相关配置`
@@ -137,10 +105,6 @@ const convertApiDataToTags = (apiTags: ApiTagItem[]): UserTagDefinition[] => {
         .sort((a, b) => a.order - b.order) // 按order排序
         .map((tag) => {
             const type = WIDGET_TYPE_MAP[tag.widgetType] || 'text'
-            const options =
-                type === 'dateRange' || type === 'numberRange'
-                    ? undefined
-                    : getDefaultOptions(type, tag.labelFieldName)
 
             return {
                 key: tag.labelFieldName,
@@ -151,7 +115,6 @@ const convertApiDataToTags = (apiTags: ApiTagItem[]): UserTagDefinition[] => {
                     tag.labelFieldName,
                     tag.labelZhName
                 ),
-                options,
                 apiData: tag
             }
         })
@@ -175,6 +138,11 @@ const UserProfileAnalysis: FC = () => {
 
     // 存储从API获取的标签分析数据
     const [tagAnalysisData, setTagAnalysisData] = useState<TagAnalysisData>({})
+
+    // 缓存标签值数据，避免重复请求
+    const [labelValuesCache, setLabelValuesCache] = useState<
+        Record<number, { label: string; value: string }[]>
+    >({})
 
     const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(
         null
@@ -200,20 +168,12 @@ const UserProfileAnalysis: FC = () => {
                     message.success(
                         `加载成功，共获取${response.records.data.length}个标签`
                     )
-
-                    // 生成初始的分析数据
-                    const processedData = generateInitialAnalysisData(
-                        response.records.data
-                    )
-                    setTagAnalysisData(processedData)
                 } else {
                     throw new Error('API返回数据格式不正确')
                 }
             } catch (error) {
                 console.error('获取页面数据失败:', error)
                 message.error('获取数据失败，请检查网络连接')
-
-                // 失败时使用空数据
                 setApiTags([])
             } finally {
                 setPageLoading(false)
@@ -223,91 +183,154 @@ const UserProfileAnalysis: FC = () => {
         initPageData()
     }, [])
 
-    // 生成初始分析数据
-    const generateInitialAnalysisData = (
-        apiData: ApiTagItem[]
-    ): TagAnalysisData => {
-        const analysisData: TagAnalysisData = {}
-
-        apiData.forEach((tag) => {
-            const type = WIDGET_TYPE_MAP[tag.widgetType] || 'text'
-            const options = getDefaultOptions(type, tag.labelFieldName)
-
-            if (options.length > 0) {
-                const data: Record<string, number> = {}
-                options.forEach((opt) => {
-                    data[opt] = Math.floor(Math.random() * 900) + 100
-                })
-                analysisData[tag.labelZhName] = data
-            }
-        })
-
-        return analysisData
-    }
-
     useEffect(() => {
         setPortalContainer(document.getElementById('content-left-extra'))
     }, [])
 
-    // 获取标签的动态选项值
-    const fetchLabelValues = async (
-        labelId: number
-    ): Promise<{ label: string; value: string }[]> => {
-        try {
-            setLabelValuesLoading(true)
-            const response = await post(
-                `reportApi/userprofile/api/label_values?lid=${labelId}`
-            )
+    // 获取标签的动态选项值（带缓存）
+    const fetchLabelValues = useCallback(
+        async (
+            labelId: number
+        ): Promise<{ label: string; value: string }[]> => {
+            console.log(`开始获取标签值，labelId: ${labelId}`)
 
-            console.log('标签值API响应:', response)
-
-            if (
-                response?.records?.data &&
-                Array.isArray(response.records.data)
-            ) {
-                // 转换API返回的标签值为选项格式
-                return response.records.data
-                    .sort(
-                        (a: ApiLabelValue, b: ApiLabelValue) =>
-                            a.order - b.order
-                    )
-                    .map((item: ApiLabelValue) => ({
-                        label: item.labelValueZhName,
-                        value: item.labelValue
-                    }))
+            // 检查缓存
+            if (labelValuesCache[labelId]) {
+                console.log(
+                    `使用缓存数据 for labelId: ${labelId}`,
+                    labelValuesCache[labelId]
+                )
+                return labelValuesCache[labelId]
             }
 
-            return []
-        } catch (error) {
-            console.error('获取标签值失败:', error)
-            message.error('获取标签选项失败')
-            return []
-        } finally {
-            setLabelValuesLoading(false)
-        }
-    }
+            try {
+                setLabelValuesLoading(true)
+                const response = await post(
+                    `reportApi/userprofile/api/label_values?lid=${labelId}`
+                )
+
+                console.log('标签值API响应:', response)
+
+                // 检查不同的响应结构
+                let apiData = null
+                if (
+                    response?.records?.data &&
+                    Array.isArray(response.records.data)
+                ) {
+                    apiData = response.records.data
+                } else if (Array.isArray(response)) {
+                    apiData = response
+                } else if (response?.data && Array.isArray(response.data)) {
+                    apiData = response.data
+                }
+
+                console.log('解析后的API数据:', apiData)
+
+                if (apiData && Array.isArray(apiData)) {
+                    // 转换API返回的标签值为选项格式
+                    const options = apiData
+                        .sort(
+                            (a: ApiLabelValue, b: ApiLabelValue) =>
+                                a.order - b.order
+                        )
+                        .map((item: ApiLabelValue) => ({
+                            label: item.labelValueZhName,
+                            value: item.labelValue
+                        }))
+
+                    console.log('转换后的选项数据:', options)
+
+                    // 缓存结果
+                    setLabelValuesCache((prev) => {
+                        const newCache = {
+                            ...prev,
+                            [labelId]: options
+                        }
+                        console.log('更新缓存:', newCache)
+                        return newCache
+                    })
+
+                    return options
+                }
+
+                console.warn('API数据格式不正确或为空')
+                return []
+            } catch (error) {
+                console.error('获取标签值失败:', error)
+                message.error('获取标签选项失败')
+                return []
+            } finally {
+                setLabelValuesLoading(false)
+            }
+        },
+        [labelValuesCache]
+    )
+
+    // 根据标签选项生成分析数据
+    const generateAnalysisData = useCallback(
+        (
+            options: { label: string; value: string }[]
+        ): Record<string, number> => {
+            const data: Record<string, number> = {}
+            options.forEach((opt) => {
+                data[opt.label] = Math.floor(Math.random() * 900) + 100
+            })
+            return data
+        },
+        []
+    )
 
     // 获取标签分析数据
-    const getTagData = (tagName: string): Record<string, number> => {
-        // 优先使用API数据，如果没有则生成模拟数据
-        if (tagAnalysisData[tagName]) {
-            return tagAnalysisData[tagName]
-        }
+    const getTagData = useCallback(
+        async (tagName: string): Promise<Record<string, number>> => {
+            // 优先使用已缓存的分析数据
+            if (tagAnalysisData[tagName]) {
+                return tagAnalysisData[tagName]
+            }
 
-        const def = userTags.find((t) => t.name === tagName)
-        if (!def) return {}
+            const def = userTags.find((t) => t.name === tagName)
+            if (!def) return {}
 
-        const opts = def.dynamicOptions?.map((opt) => opt.label) ||
-            def.options || ['选项1', '选项2', '选项3']
-        const data: Record<string, number> = {}
-        opts.forEach((opt) => {
-            data[opt] = Math.floor(Math.random() * 900) + 100
-        })
+            let data: Record<string, number> = {}
 
-        // 缓存生成的数据
-        setTagAnalysisData((prev) => ({ ...prev, [tagName]: data }))
-        return data
-    }
+            // 根据标签类型生成数据
+            if (def.type === 'multi' || def.type === 'single') {
+                // 需要选项的类型，获取动态选项
+                try {
+                    const options = await fetchLabelValues(def.apiData.labelId)
+                    data = generateAnalysisData(options)
+                } catch (error) {
+                    console.error('获取标签选项失败:', error)
+                    // 降级处理：生成默认数据
+                    data = { 选项1: 100, 选项2: 200, 选项3: 150 }
+                }
+            } else if (def.type === 'dateRange') {
+                // 日期范围类型的模拟数据
+                data = {
+                    近7天: Math.floor(Math.random() * 500) + 100,
+                    近30天: Math.floor(Math.random() * 800) + 200,
+                    近90天: Math.floor(Math.random() * 600) + 150,
+                    更早: Math.floor(Math.random() * 300) + 50
+                }
+            } else if (def.type === 'numberRange') {
+                // 数值范围类型的模拟数据
+                data = {
+                    '0-100': Math.floor(Math.random() * 400) + 100,
+                    '100-500': Math.floor(Math.random() * 600) + 200,
+                    '500-1000': Math.floor(Math.random() * 300) + 100,
+                    '1000+': Math.floor(Math.random() * 200) + 50
+                }
+            } else {
+                // 文本类型的默认数据
+                data = { 数据: Math.floor(Math.random() * 500) + 100 }
+            }
+
+            // 缓存生成的数据
+            setTagAnalysisData((prev) => ({ ...prev, [tagName]: data }))
+            return data
+        },
+        [tagAnalysisData, userTags, fetchLabelValues, generateAnalysisData]
+    )
 
     const openAddDrawer = () => {
         setLeftOpen(true)
@@ -324,34 +347,26 @@ const UserProfileAnalysis: FC = () => {
             return
         }
 
+        console.log(
+            '打开编辑抽屉，标签:',
+            name,
+            '标签ID:',
+            tagDef.apiData.labelId
+        )
         setCurrentTagName(name)
+        setEditOpen(true)
 
-        // 如果是需要动态选项的标签类型，获取标签值
+        // 如果是需要动态选项的标签类型，在打开抽屉后立即加载标签值
         if (tagDef.type === 'multi' || tagDef.type === 'single') {
+            console.log('需要加载标签选项，类型:', tagDef.type)
             try {
-                const dynamicOptions = await fetchLabelValues(
-                    tagDef.apiData.labelId
-                )
-
-                // 更新标签定义中的动态选项
-                const updatedUserTags = userTags.map((tag) =>
-                    tag.name === name ? { ...tag, dynamicOptions } : tag
-                )
-
-                // 这里我们需要更新 apiTags 来触发 userTags 的重新计算
-                setApiTags((prev) =>
-                    prev.map((tag) =>
-                        tag.labelId === tagDef.apiData.labelId
-                            ? { ...tag, dynamicOptions }
-                            : tag
-                    )
-                )
+                const options = await fetchLabelValues(tagDef.apiData.labelId)
+                console.log('获取到的选项:', options)
             } catch (error) {
                 console.error('获取标签选项失败:', error)
+                message.error('获取标签选项失败，请重试')
             }
         }
-
-        setEditOpen(true)
     }
 
     // 根据标签名移除，避免因索引更新导致的删除错误
@@ -400,7 +415,8 @@ const UserProfileAnalysis: FC = () => {
             if (index === -1) list.push(data)
             else list[index] = data
 
-            let chartData = getTagData(def.name)
+            // 获取分析数据
+            const chartData = await getTagData(def.name)
 
             setSelectedTags(list)
             setAnalysisResults((prev) => {
@@ -449,21 +465,24 @@ const UserProfileAnalysis: FC = () => {
         }
     }
 
-    // 获取当前标签的选项（优先使用动态选项）
+    // 获取当前标签的选项（从缓存中获取）
     const getCurrentTagOptions = () => {
-        if (!currentDef) return []
-
-        // 优先使用动态获取的选项
-        if (currentDef.dynamicOptions && currentDef.dynamicOptions.length > 0) {
-            return currentDef.dynamicOptions
+        if (!currentDef?.apiData?.labelId) {
+            console.log('无法获取标签选项：标签定义或labelId不存在', currentDef)
+            return []
         }
 
-        // 其次使用静态配置的选项
-        if (currentDef.options && currentDef.options.length > 0) {
-            return currentDef.options.map((opt) => ({ label: opt, value: opt }))
+        const cachedOptions = labelValuesCache[currentDef.apiData.labelId]
+        console.log(`获取当前标签选项，labelId: ${currentDef.apiData.labelId}`)
+        console.log('缓存状态:', labelValuesCache)
+        console.log('当前标签选项:', cachedOptions)
+
+        if (!cachedOptions) {
+            console.log('缓存中没有找到标签选项')
+            return []
         }
 
-        return []
+        return cachedOptions
     }
 
     if (pageLoading) {
@@ -673,147 +692,155 @@ const UserProfileAnalysis: FC = () => {
                                 {currentDef.definition}
                             </div>
                             <div className="text-sm text-gray-600">
-                                <strong>字段名：</strong>
-                                {currentDef.key}
-                            </div>
-                            <div className="text-sm text-gray-600">
                                 <strong>分类：</strong>
                                 {currentDef.category}
                             </div>
                         </div>
 
-                        {labelValuesLoading && (
-                            <div className="text-center py-4">
-                                <Spin tip="正在加载标签选项..." />
-                            </div>
-                        )}
-
                         {/* 根据标签类型渲染不同的表单组件 */}
-                        {!labelValuesLoading &&
-                            (() => {
-                                const options = getCurrentTagOptions()
+                        {(() => {
+                            const options = getCurrentTagOptions()
 
-                                switch (currentDef.type) {
-                                    case 'multi':
+                            switch (currentDef.type) {
+                                case 'multi':
+                                    if (labelValuesLoading) {
                                         return (
-                                            <ProFormCheckbox.Group
-                                                name="value"
-                                                label={`请选择${currentDef.name}`}
-                                                options={options}
-                                                rules={[
-                                                    {
-                                                        required: true,
-                                                        message:
-                                                            '请至少选择一个选项'
-                                                    }
-                                                ]}
-                                            />
-                                        )
-                                    case 'single':
-                                        return (
-                                            <ProFormRadio.Group
-                                                name="value"
-                                                label={`请选择${currentDef.name}`}
-                                                options={options}
-                                                rules={[
-                                                    {
-                                                        required: true,
-                                                        message:
-                                                            '请选择一个选项'
-                                                    }
-                                                ]}
-                                            />
-                                        )
-                                    case 'dateRange':
-                                        return (
-                                            <ProFormDateRangePicker
-                                                name="value"
-                                                label={`请选择${currentDef.name}范围`}
-                                                rules={[
-                                                    {
-                                                        required: true,
-                                                        message:
-                                                            '请选择日期范围'
-                                                    }
-                                                ]}
-                                            />
-                                        )
-                                    case 'numberRange':
-                                        return (
-                                            <>
-                                                <ProFormDigit
-                                                    name="min"
-                                                    label="最小值"
-                                                    placeholder="请输入最小值"
-                                                    rules={[
-                                                        {
-                                                            required: true,
-                                                            message:
-                                                                '请输入最小值'
-                                                        }
-                                                    ]}
-                                                />
-                                                <ProFormDigit
-                                                    name="max"
-                                                    label="最大值"
-                                                    placeholder="请输入最大值"
-                                                    rules={[
-                                                        {
-                                                            required: true,
-                                                            message:
-                                                                '请输入最大值'
-                                                        },
-                                                        ({
-                                                            getFieldValue
-                                                        }) => ({
-                                                            validator(
-                                                                _,
-                                                                value
-                                                            ) {
-                                                                const min =
-                                                                    getFieldValue(
-                                                                        'min'
-                                                                    )
-                                                                if (
-                                                                    !value ||
-                                                                    !min ||
-                                                                    value >= min
-                                                                ) {
-                                                                    return Promise.resolve()
-                                                                }
-                                                                return Promise.reject(
-                                                                    new Error(
-                                                                        '最大值必须大于等于最小值'
-                                                                    )
-                                                                )
-                                                            }
-                                                        })
-                                                    ]}
-                                                />
-                                            </>
-                                        )
-                                    case 'text':
-                                        return (
-                                            <ProFormText
-                                                name="value"
-                                                label={`请输入${currentDef.name}`}
-                                                placeholder="请输入内容"
-                                                rules={[
-                                                    {
-                                                        required: true,
-                                                        message: '请输入内容'
-                                                    }
-                                                ]}
-                                            />
-                                        )
-                                    default:
-                                        return (
-                                            <div className="text-center py-4 text-gray-500">
-                                                暂不支持此类型的标签配置
+                                            <div className="text-center py-4">
+                                                <Spin tip="正在加载标签选项..." />
                                             </div>
                                         )
-                                }
-                            })()}
+                                    }
+                                    if (options.length === 0) {
+                                        return (
+                                            <div className="text-center py-4 text-orange-500">
+                                                该标签暂无可选项数据
+                                            </div>
+                                        )
+                                    }
+                                    return (
+                                        <ProFormCheckbox.Group
+                                            name="value"
+                                            label={`请选择${currentDef.name}`}
+                                            options={options}
+                                            rules={[
+                                                {
+                                                    required: true,
+                                                    message:
+                                                        '请至少选择一个选项'
+                                                }
+                                            ]}
+                                        />
+                                    )
+                                case 'single':
+                                    if (labelValuesLoading) {
+                                        return (
+                                            <div className="text-center py-4">
+                                                <Spin tip="正在加载标签选项..." />
+                                            </div>
+                                        )
+                                    }
+                                    if (options.length === 0) {
+                                        return (
+                                            <div className="text-center py-4 text-orange-500">
+                                                该标签暂无可选项数据
+                                            </div>
+                                        )
+                                    }
+                                    return (
+                                        <ProFormRadio.Group
+                                            name="value"
+                                            label={`请选择${currentDef.name}`}
+                                            options={options}
+                                            rules={[
+                                                {
+                                                    required: true,
+                                                    message: '请选择一个选项'
+                                                }
+                                            ]}
+                                        />
+                                    )
+                                case 'dateRange':
+                                    return (
+                                        <ProFormDateRangePicker
+                                            name="value"
+                                            label={`请选择${currentDef.name}范围`}
+                                            rules={[
+                                                {
+                                                    required: true,
+                                                    message: '请选择日期范围'
+                                                }
+                                            ]}
+                                        />
+                                    )
+                                case 'numberRange':
+                                    return (
+                                        <>
+                                            <ProFormDigit
+                                                name="min"
+                                                label="最小值"
+                                                placeholder="请输入最小值"
+                                                rules={[
+                                                    {
+                                                        required: true,
+                                                        message: '请输入最小值'
+                                                    }
+                                                ]}
+                                            />
+                                            <ProFormDigit
+                                                name="max"
+                                                label="最大值"
+                                                placeholder="请输入最大值"
+                                                rules={[
+                                                    {
+                                                        required: true,
+                                                        message: '请输入最大值'
+                                                    },
+                                                    ({ getFieldValue }) => ({
+                                                        validator(_, value) {
+                                                            const min =
+                                                                getFieldValue(
+                                                                    'min'
+                                                                )
+                                                            if (
+                                                                !value ||
+                                                                !min ||
+                                                                value >= min
+                                                            ) {
+                                                                return Promise.resolve()
+                                                            }
+                                                            return Promise.reject(
+                                                                new Error(
+                                                                    '最大值必须大于等于最小值'
+                                                                )
+                                                            )
+                                                        }
+                                                    })
+                                                ]}
+                                            />
+                                        </>
+                                    )
+                                case 'text':
+                                    return (
+                                        <ProFormText
+                                            name="value"
+                                            label={`请输入${currentDef.name}`}
+                                            placeholder="请输入内容"
+                                            rules={[
+                                                {
+                                                    required: true,
+                                                    message: '请输入内容'
+                                                }
+                                            ]}
+                                        />
+                                    )
+                                default:
+                                    return (
+                                        <div className="text-center py-4 text-gray-500">
+                                            暂不支持此类型的标签配置
+                                        </div>
+                                    )
+                            }
+                        })()}
                     </div>
                 )}
             </DrawerForm>

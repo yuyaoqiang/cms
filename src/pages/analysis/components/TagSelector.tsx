@@ -24,8 +24,7 @@ export interface UserTagDefinition {
     name: string
     type: TagType
     definition?: string
-    options?: string[]
-    apiData?: ApiTagItem // 保存原始API数据
+    apiData: ApiTagItem // 保存原始API数据
 }
 
 interface TagSelectorProps {
@@ -33,7 +32,7 @@ interface TagSelectorProps {
     selectedNames: string[]
     onClose: () => void
     onSelect: (name: string) => void
-    apiTags?: ApiTagItem[] // 从API获取的标签数据
+    apiTags: ApiTagItem[] // 从API获取的标签数据
 }
 
 // widgetType 到 TagType 的映射
@@ -41,57 +40,8 @@ const WIDGET_TYPE_MAP: Record<number, TagType> = {
     1: 'multi', // 多选
     2: 'single', // 单选
     3: 'dateRange', // 日期范围
-    4: 'numberRange', // 数值范围
-    5: 'numberRange' // 数值范围(输赢可能是正负数)
-}
-
-// 为不同类型的标签提供默认选项
-const getDefaultOptions = (type: TagType, fieldName: string): string[] => {
-    switch (type) {
-        case 'single':
-            if (fieldName.includes('sex') || fieldName.includes('gender')) {
-                return ['男', '女']
-            }
-            if (
-                fieldName.includes('black') ||
-                fieldName.includes('grey') ||
-                fieldName.includes('active') ||
-                fieldName.includes('reg7pay')
-            ) {
-                return ['是', '否']
-            }
-            return ['选项1', '选项2']
-
-        case 'multi':
-            if (fieldName.includes('source')) {
-                return ['直客', '代理']
-            }
-            if (fieldName.includes('site_type')) {
-                return ['S', 'K']
-            }
-            if (fieldName.includes('device')) {
-                return ['iOS', 'Android', 'Windows']
-            }
-            if (fieldName.includes('channel')) {
-                return ['渠道1', '渠道2', '渠道3']
-            }
-            if (fieldName.includes('venue') || fieldName.includes('prefer')) {
-                return ['场馆A', '场馆B', '场馆C']
-            }
-            if (fieldName.includes('game')) {
-                return ['游戏A', '游戏B', '游戏C']
-            }
-            if (fieldName.includes('active_address')) {
-                return ['北京', '上海', '广州', '深圳']
-            }
-            if (fieldName.includes('member_grade')) {
-                return ['VIP1', 'VIP2', 'VIP3', 'VIP4', 'VIP5']
-            }
-            return ['选项1', '选项2', '选项3']
-
-        default:
-            return []
-    }
+    4: 'numberRange', // 数值范围(正整数)
+    5: 'numberRange' // 数值范围(正负整数)
 }
 
 // 根据字段名生成标签定义说明
@@ -130,10 +80,6 @@ const convertApiDataToTags = (apiTags: ApiTagItem[]): UserTagDefinition[] => {
         .sort((a, b) => a.order - b.order) // 按order排序
         .map((tag) => {
             const type = WIDGET_TYPE_MAP[tag.widgetType] || 'text'
-            const options =
-                type === 'dateRange' || type === 'numberRange'
-                    ? undefined
-                    : getDefaultOptions(type, tag.labelFieldName)
 
             return {
                 key: tag.labelFieldName,
@@ -144,7 +90,6 @@ const convertApiDataToTags = (apiTags: ApiTagItem[]): UserTagDefinition[] => {
                     tag.labelFieldName,
                     tag.labelZhName
                 ),
-                options,
                 apiData: tag
             }
         })
@@ -180,6 +125,28 @@ const TagSelector: FC<TagSelectorProps> = ({
                 t.key.includes(search)
         )
     }, [userTags, search])
+
+    // 如果没有API数据，显示空状态
+    if (apiTags.length === 0) {
+        return (
+            <Drawer
+                title="选择标签"
+                placement="left"
+                open={open}
+                onClose={onClose}
+                width={450}
+            >
+                <div className="text-center py-8">
+                    <div className="text-gray-400 text-lg mb-4">
+                        暂无可用标签
+                    </div>
+                    <div className="text-gray-500 text-sm">
+                        请检查网络连接或联系管理员
+                    </div>
+                </div>
+            </Drawer>
+        )
+    }
 
     return (
         <Drawer
@@ -239,7 +206,16 @@ const TagSelector: FC<TagSelectorProps> = ({
                                     return (
                                         <Tooltip
                                             key={t.key}
-                                            title={t.definition}
+                                            title={
+                                                <div>
+                                                    <div className="font-medium mb-1">
+                                                        {t.definition}
+                                                    </div>
+                                                    <div className="text-xs opacity-75">
+                                                        分类: {t.category}
+                                                    </div>
+                                                </div>
+                                            }
                                             placement="topLeft"
                                         >
                                             <div
@@ -329,6 +305,18 @@ const TagSelector: FC<TagSelectorProps> = ({
                         )
                     })}
                 </Collapse>
+
+                {/* 搜索无结果提示 */}
+                {search && filteredTags.length === 0 && (
+                    <div className="text-center py-8">
+                        <div className="text-gray-400 text-base mb-2">
+                            未找到匹配的标签
+                        </div>
+                        <div className="text-gray-500 text-sm">
+                            请尝试其他关键词搜索
+                        </div>
+                    </div>
+                )}
             </div>
 
             <div className="flex justify-between items-center p-4 border-t bg-gray-50">
