@@ -1,5 +1,6 @@
 import PieChart from './components/PieChart'
 import TagSelector from './components/TagSelector'
+import { get, post } from '@/api'
 import { userTags, type UserTagDefinition } from '@/constants/userTagOptions'
 import { getLocalStorage, setLocalStorage } from '@/utils/xLocalStorage'
 import { CloseOutlined, DoubleRightOutlined } from '@ant-design/icons'
@@ -12,7 +13,7 @@ import {
     ProFormDigit,
     ProFormText
 } from '@ant-design/pro-form'
-import { Layout, Button, Tag, Table, message } from 'antd'
+import { Layout, Button, Tag, Table, message, Spin } from 'antd'
 import dayjs from 'dayjs'
 import { FC, useState, useEffect } from 'react'
 import { createPortal } from 'react-dom'
@@ -27,19 +28,6 @@ const customRanges: Record<string, string[]> = {
     coin30Days: ['0-100', '100-500', '500-1000', '1000以上']
 }
 
-// 根据标签选项或自定义区间生成随机的模拟数据
-const mockTagData: Record<string, Record<string, number>> = {}
-userTags.forEach((tag) => {
-    const opts = tag.options ?? customRanges[tag.key]
-    if (opts) {
-        const data: Record<string, number> = {}
-        opts.forEach((opt) => {
-            data[opt] = Math.floor(Math.random() * 900) + 100
-        })
-        mockTagData[tag.name] = data
-    }
-})
-
 interface SelectedTag {
     name: string
     values: string[]
@@ -53,17 +41,8 @@ interface UserProfile {
     userCount: number
 }
 
-const ensureMockData = (def: UserTagDefinition) => {
-    if (!mockTagData[def.name]) {
-        const opts = def.options ??
-            customRanges[def.key] ?? ['选项1', '选项2', '选项3']
-        const data: Record<string, number> = {}
-        opts.forEach((opt) => {
-            data[opt] = Math.floor(Math.random() * 900) + 100
-        })
-        mockTagData[def.name] = data
-    }
-    return mockTagData[def.name]
+interface TagAnalysisData {
+    [tagName: string]: Record<string, number>
 }
 
 const UserProfileAnalysis: FC = () => {
@@ -72,16 +51,145 @@ const UserProfileAnalysis: FC = () => {
     const [editOpen, setEditOpen] = useState(false)
     const [saveOpen, setSaveOpen] = useState(false)
     const [currentTagName, setCurrentTagName] = useState<string>()
+    const [loading, setLoading] = useState(false)
+    const [pageLoading, setPageLoading] = useState(true)
+
     // 存储所有需要展示分析结果的标签
     const [analysisResults, setAnalysisResults] = useState<
         { name: string; data: Record<string, number> }[]
     >([])
 
-    const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(null)
+    // 存储从API获取的标签分析数据
+    const [tagAnalysisData, setTagAnalysisData] = useState<TagAnalysisData>({})
+
+    const [portalContainer, setPortalContainer] = useState<HTMLElement | null>(
+        null
+    )
+
+    // 页面加载时获取数据
+    useEffect(() => {
+        const initPageData = async () => {
+            try {
+                setPageLoading(true)
+
+                // 获取用户标签数据
+                const response = await post('reportApi/userprofile/api/labels')
+                console.log('API响应数据:', response)
+
+                if (response) {
+                    // 处理API返回的数据，转换为页面需要的格式
+                    const processedData = processApiData(response)
+                    setTagAnalysisData(processedData)
+                    message.success('数据加载成功')
+                } else {
+                    throw new Error('API返回数据为空')
+                }
+            } catch (error) {
+                console.error('获取页面数据失败:', error)
+                message.error('获取数据失败，使用模拟数据')
+
+                // 失败时使用本地数据兜底
+                loadLocalData()
+            } finally {
+                setPageLoading(false)
+            }
+        }
+
+        initPageData()
+    }, [])
+
+    // 处理API返回的数据
+    const processApiData = (apiData: any): TagAnalysisData => {
+        const processedData: TagAnalysisData = {}
+
+        try {
+            // 根据API返回的数据结构进行处理
+            // 这里需要根据实际API返回的数据格式进行调整
+            console.log('处理API数据:', apiData)
+
+            // 示例处理逻辑，需要根据实际API数据结构调整
+            if (Array.isArray(apiData)) {
+                // 如果返回的是数组格式
+                apiData.forEach((item: any) => {
+                    if (item.tagName && item.data) {
+                        processedData[item.tagName] = item.data
+                    }
+                })
+            } else if (apiData && typeof apiData === 'object') {
+                // 如果返回的是对象格式
+                Object.keys(apiData).forEach((key) => {
+                    if (apiData[key] && typeof apiData[key] === 'object') {
+                        processedData[key] = apiData[key]
+                    }
+                })
+            }
+
+            // 如果处理后的数据为空，生成一些示例数据用于展示
+            if (Object.keys(processedData).length === 0) {
+                console.log('API数据为空，生成示例数据')
+                userTags.slice(0, 3).forEach((tag) => {
+                    const opts = tag.options ??
+                        customRanges[tag.key] ?? [
+                            '示例选项1',
+                            '示例选项2',
+                            '示例选项3'
+                        ]
+                    const data: Record<string, number> = {}
+                    opts.forEach((opt) => {
+                        data[opt] = Math.floor(Math.random() * 900) + 100
+                    })
+                    processedData[tag.name] = data
+                })
+            }
+        } catch (error) {
+            console.error('处理API数据失败:', error)
+        }
+
+        return processedData
+    }
+
+    // 加载本地数据作为兜底
+    const loadLocalData = () => {
+        // 生成模拟数据
+        const mockData: TagAnalysisData = {}
+        userTags.forEach((tag) => {
+            const opts = tag.options ?? customRanges[tag.key]
+            if (opts) {
+                const data: Record<string, number> = {}
+                opts.forEach((opt) => {
+                    data[opt] = Math.floor(Math.random() * 900) + 100
+                })
+                mockData[tag.name] = data
+            }
+        })
+        setTagAnalysisData(mockData)
+    }
 
     useEffect(() => {
         setPortalContainer(document.getElementById('content-left-extra'))
     }, [])
+
+    // 获取标签分析数据
+    const getTagData = (tagName: string): Record<string, number> => {
+        // 优先使用API数据，如果没有则生成模拟数据
+        if (tagAnalysisData[tagName]) {
+            return tagAnalysisData[tagName]
+        }
+
+        const def = userTags.find((t) => t.name === tagName)
+        if (!def) return {}
+
+        const opts = def.options ??
+            customRanges[def.key] ?? ['选项1', '选项2', '选项3']
+        const data: Record<string, number> = {}
+        opts.forEach((opt) => {
+            data[opt] = Math.floor(Math.random() * 900) + 100
+        })
+
+        // 缓存生成的数据
+        setTagAnalysisData((prev) => ({ ...prev, [tagName]: data }))
+        return data
+    }
 
     const openAddDrawer = () => {
         setLeftOpen(true)
@@ -112,39 +220,101 @@ const UserProfileAnalysis: FC = () => {
     const handleFinish = async (values: any) => {
         const def = userTags.find((t) => t.name === currentTagName)
         if (!def) return true
-        ensureMockData(def)
-        const list = [...selectedTags]
-        const index = list.findIndex((t) => t.name === def.name)
-        const data: SelectedTag = { name: def.name, values: [] }
-        switch (def.type) {
-            case 'multi':
-                data.values = values.value
-                break
-            case 'single':
-            case 'text':
-                data.values = [values.value]
-                break
-            case 'dateRange':
-                data.values = values.value
-                break
-            case 'numberRange':
-                data.values = [String(values.min), String(values.max)]
-                break
+
+        try {
+            setLoading(true)
+
+            const list = [...selectedTags]
+            const index = list.findIndex((t) => t.name === def.name)
+            const data: SelectedTag = { name: def.name, values: [] }
+
+            switch (def.type) {
+                case 'multi':
+                    data.values = values.value
+                    break
+                case 'single':
+                case 'text':
+                    data.values = [values.value]
+                    break
+                case 'dateRange':
+                    data.values = values.value
+                    break
+                case 'numberRange':
+                    data.values = [String(values.min), String(values.max)]
+                    break
+            }
+
+            if (index === -1) list.push(data)
+            else list[index] = data
+
+            // 发送标签分析请求（可选，如果需要基于选择的标签重新分析）
+            // const analysisResponse = await post('http://172.31.152.17/reportApi/userprofile/api/analysis', {
+            //     tagName: def.name,
+            //     tagValues: data.values,
+            //     tagType: def.type
+            // })
+
+            let chartData = getTagData(def.name)
+            // if (analysisResponse?.result) {
+            //     chartData = analysisResponse.result
+            // }
+
+            setSelectedTags(list)
+            setAnalysisResults((prev) => {
+                const idx = prev.findIndex((r) => r.name === def.name)
+                if (idx === -1)
+                    return [...prev, { name: def.name, data: chartData }]
+                const result = [...prev]
+                result[idx] = { name: def.name, data: chartData }
+                return result
+            })
+
+            setEditOpen(false)
+            message.success('标签分析完成')
+        } catch (error) {
+            console.error('标签分析失败:', error)
+            message.error('分析失败，请重试')
+        } finally {
+            setLoading(false)
         }
-        if (index === -1) list.push(data)
-        else list[index] = data
-        setSelectedTags(list)
-        setAnalysisResults((prev) => {
-            const chartData = mockTagData[def.name] ?? {}
-            const idx = prev.findIndex((r) => r.name === def.name)
-            if (idx === -1)
-                return [...prev, { name: def.name, data: chartData }]
-            const result = [...prev]
-            result[idx] = { name: def.name, data: chartData }
-            return result
-        })
-        setEditOpen(false)
+
         return true
+    }
+
+    // 保存用户画像
+    const handleSaveProfile = async (values: { name: string }) => {
+        try {
+            const profile: UserProfile = {
+                id: String(Date.now()),
+                name: values.name,
+                tags: selectedTags,
+                updateTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
+                userCount: Math.floor(Math.random() * 9000) + 1000
+            }
+
+            // 保存到服务器（可选，如果有保存接口）
+            // await post('http://172.31.152.17/reportApi/userprofile/api/save-profile', profile)
+
+            // 同时保存到本地作为备份
+            const profiles: UserProfile[] =
+                (getLocalStorage('profiles') as unknown as UserProfile[]) ?? []
+            setLocalStorage('profiles', [...profiles, profile])
+
+            message.success('保存成功')
+            return true
+        } catch (error) {
+            console.error('保存失败:', error)
+            message.error('保存失败，请重试')
+            return false
+        }
+    }
+
+    if (pageLoading) {
+        return (
+            <div className="h-screen flex items-center justify-center">
+                <Spin size="large" tip="加载中..." />
+            </div>
+        )
     }
 
     return (
@@ -178,7 +348,6 @@ const UserProfileAnalysis: FC = () => {
             <Layout.Content className="bg-gray-100 p-4 space-y-6">
                 <div className="flex flex-wrap gap-2 mb-4">
                     {selectedTags.map((t) => {
-                        const def = userTags.find((d) => d.name === t.name)
                         return (
                             <Tag
                                 key={t.name}
@@ -205,7 +374,6 @@ const UserProfileAnalysis: FC = () => {
                             <PieChart data={r.data} />
                             <Table
                                 pagination={false}
-                                // 使用空对象以避免 Object.entries 抛错
                                 dataSource={Object.entries(r.data ?? {}).map(
                                     ([key, value]) => ({
                                         key,
@@ -223,32 +391,19 @@ const UserProfileAnalysis: FC = () => {
                     </div>
                 ))}
             </Layout.Content>
+
             <TagSelector
                 open={leftOpen}
                 onClose={cancelAddTags}
                 onSelect={openEditDrawer}
                 selectedNames={selectedTags.map((t) => t.name)}
             />
+
             <ModalForm
                 title="保存画像"
                 open={saveOpen}
                 onOpenChange={setSaveOpen}
-                onFinish={async (values: { name: string }) => {
-                    const profiles: UserProfile[] =
-                        (getLocalStorage(
-                            'profiles'
-                        ) as unknown as UserProfile[]) ?? []
-                    const profile: UserProfile = {
-                        id: String(Date.now()),
-                        name: values.name,
-                        tags: selectedTags,
-                        updateTime: dayjs().format('YYYY-MM-DD HH:mm:ss'),
-                        userCount: Math.floor(Math.random() * 9000) + 1000
-                    }
-                    setLocalStorage('profiles', [...profiles, profile])
-                    message.success('保存成功')
-                    return true
-                }}
+                onFinish={handleSaveProfile}
                 modalProps={{ destroyOnClose: true }}
             >
                 <ProFormText
@@ -257,11 +412,13 @@ const UserProfileAnalysis: FC = () => {
                     rules={[{ required: true, message: '请输入画像名称' }]}
                 />
             </ModalForm>
+
             <DrawerForm
                 title={`编辑：${currentTagName}`}
                 open={editOpen}
                 onOpenChange={setEditOpen}
                 onFinish={handleFinish}
+                loading={loading}
                 drawerProps={{
                     destroyOnClose: true,
                     placement: 'right',
@@ -269,8 +426,8 @@ const UserProfileAnalysis: FC = () => {
                 }}
                 initialValues={{
                     value: currentSelected?.values,
-                    min: currentSelected?.values[0],
-                    max: currentSelected?.values[1]
+                    min: currentSelected?.values?.[0],
+                    max: currentSelected?.values?.[1]
                 }}
             >
                 {currentDef && (

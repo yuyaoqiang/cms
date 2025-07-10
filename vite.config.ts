@@ -8,15 +8,6 @@ export default defineConfig(({ mode }) => ({
     build: {
         outDir: path.resolve(__dirname, './dist')
     },
-    // define: {
-    //     'import.meta.env._version': JSON.stringify(
-    //         `${dayjs().format('YYYY-MM-DD HH:mm:ss')}|${execSync(
-    //             'git rev-parse HEAD'
-    //         )
-    //             .toString()
-    //             .slice(0, 7)}`
-    //     )
-    // },
     esbuild: {
         drop: mode === 'development' ? [] : ['console', 'debugger'],
         legalComments: 'none'
@@ -29,7 +20,17 @@ export default defineConfig(({ mode }) => ({
     },
     server: {
         proxy: {
-            '/api': loadEnv(mode, process.cwd(), '').VITE_API_URL,
+            '/reportApi': {
+                target: 'http://172.31.152.17',
+                changeOrigin: true,
+                secure: false,
+                logLevel: 'debug',
+                cookieDomainRewrite: {
+                    '*': 'localhost'
+                },
+                rewrite: (path) =>
+                    path.replace(/^\/api/, '/reportApi/userprofile/api')
+            },
             '/admin': loadEnv(mode, process.cwd(), '').VITE_API_URL
         }
     }
