@@ -180,8 +180,11 @@ const UserProfileAnalysis: FC = () => {
             }
         }
 
-        initPageData()
-    }, [])
+        // 只在首次加载时调用
+        if (apiTags.length === 0) {
+            initPageData()
+        }
+    }, []) // 移除apiTags依赖，避免重复请求
 
     useEffect(() => {
         setPortalContainer(document.getElementById('content-left-extra'))
@@ -675,7 +678,7 @@ const UserProfileAnalysis: FC = () => {
                 drawerProps={{
                     destroyOnClose: true,
                     placement: 'right',
-                    width: 400
+                    width: 520 // 调整宽度以容纳日期时间范围组件
                 }}
                 initialValues={{
                     value: currentSelected?.values,
