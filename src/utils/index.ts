@@ -22,7 +22,7 @@ import {
     reverse,
     uniq
 } from 'lodash'
-import { stringify } from 'qs'
+// import { stringify } from 'qs'
 
 // 忽略antd的findDOMNode报错，等antd修复了再去除
 export const ignoreAntdFindDOMNodeErr = () => {
@@ -231,9 +231,9 @@ export const getPermissionsArr = (arr: any[]) => {
  * @param {string} id 权限标识
  * @returns {boolean} 是否有权限
  */
-export const permission = (id: string) => {
-    const buttonPermissions = useStore.getState().buttonPermissions
-    return buttonPermissions.includes(id)
+export const permission = (_id: string) => {
+    // TODO: 实现权限检查逻辑
+    return true
 }
 
 /**

@@ -2,8 +2,7 @@ import axios, { type AxiosInstance, type AxiosRequestConfig } from 'axios'
 
 // 抽离 token 为变量
 const YABO_AUTH_TOKEN =
-    'eyJ0eXAiOiJKc29uV2ViVG9rZW4iLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJpc3N1c2VyIiwiYXVkIjoiYXVkaWVuY2UiLCJyb2xlX25hbWUiOiJhZG1pbmlzdHJhdG9yIiwidXNlcl9pZCI6IjIiLCJyb2xlX2lkIjoiMSIsInVzZXJfbG9naW5fc2Vzc2lvbl9pZCI6IjQ4OGM2NGM4NTkyZTc4MGJhNmEyMGM3ZTU0ZTU2ODI3IiwidXNlcl9uYW1lIjoiYmlnZGF0YSIsImFjY2Vzc190b2tlbl92YWxpZGl0eSI6IjM2MDAiLCJ0b2tlbl90eXBlIjoiYWNjZXNzX3Rva2VuIiwiZGVwdF9pZCI6IjEiLCJhY2NvdW50IjoiYmlnZGF0YSIsInRlbmFudF9jb2RlIjoiMDAwMDAwIiwiY2xpZW50X2lkIjoiY2xpZW50dGVzdCIsImV4cCI6MTc1MjEyMzA4MCwibmJmIjoxNzUyMTE5NDgwfQ.VeXkbbp6Q9RB1SDJbLPk0xF3q115CV8oyDYiqrAUYd4'
-
+    'eyJ0eXAiOiJKc29uV2ViVG9rZW4iLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJpc3N1c2VyIiwiYXVkIjoiYXVkaWVuY2UiLCJyb2xlX25hbWUiOiJhZG1pbmlzdHJhdG9yIiwidXNlcl9pZCI6IjIiLCJyb2xlX2lkIjoiMSIsInVzZXJfbG9naW5fc2Vzc2lvbl9pZCI6IjdkZDY3ODViOTA1NzRmNjRjNzg2YzgzNWE2ZjQ2NDUwIiwidXNlcl9uYW1lIjoiYmlnZGF0YSIsImFjY2Vzc190b2tlbl92YWxpZGl0eSI6IjM2MDAiLCJ0b2tlbl90eXBlIjoiYWNjZXNzX3Rva2VuIiwiZGVwdF9pZCI6IjEiLCJhY2NvdW50IjoiYmlnZGF0YSIsInRlbmFudF9jb2RlIjoiMDAwMDAwIiwiY2xpZW50X2lkIjoiY2xpZW50dGVzdCIsImV4cCI6MTc1MjE0MzU2NiwibmJmIjoxNzUyMTM5OTY2fQ._jKDyRlWBsMfkd2tUf6P7UbC_T_4damsprTNK4tgEJw'
 // 设置 cookie 的工具函数
 const setCookie = (name: string, value: string, days: number = 7) => {
     const expires = new Date()
@@ -24,7 +23,7 @@ const getCookie = (name: string): string | null => {
 }
 
 // 将 token 设置到 cookie 中
-setCookie('yabo-auth-token', YABO_AUTH_TOKEN)
+setCookie('x-access-token', YABO_AUTH_TOKEN)
 
 const instance: AxiosInstance = axios.create({
     baseURL: '/',
@@ -37,11 +36,10 @@ instance.interceptors.request.use((config) => {
     const tokenFromCookie = getCookie('yabo-auth-token') || YABO_AUTH_TOKEN
 
     // 添加认证头
-    config.headers = {
-        ...config.headers,
-        Authorization: 'Basic Y2xpZW50dGVzdDpNZmdjVWZVNXpPQWJ0ZXN0',
-        'yabo-Auth': `bearer ` + tokenFromCookie,
-        'Content-Type': 'application/json;charset=UTF-8'
+    if (config.headers) {
+        config.headers.Authorization = 'Basic Y2xpZW50dGVzdDpNZmdjVWZVNXpPQWJ0ZXN0'
+        config.headers['yabo-Auth'] = `bearer ` + tokenFromCookie
+        config.headers['Content-Type'] = 'application/json;charset=UTF-8'
     }
     return config
 })

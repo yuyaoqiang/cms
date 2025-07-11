@@ -135,6 +135,8 @@ const TagSelector: FC<TagSelectorProps> = ({
                 open={open}
                 onClose={onClose}
                 width={450}
+                zIndex={2000} // 设置高层级
+                mask={false} // 移除遮罩，避免阻挡其他操作
             >
                 <div className="text-center py-8">
                     <div className="text-gray-400 text-lg mb-4">
@@ -155,6 +157,8 @@ const TagSelector: FC<TagSelectorProps> = ({
             open={open}
             onClose={onClose}
             width={450}
+            zIndex={2000} // 设置高层级，确保在配置弹框之上
+            mask={false} // 移除遮罩，这样不会阻挡背景的操作
             bodyStyle={{
                 padding: 0,
                 display: 'flex',
