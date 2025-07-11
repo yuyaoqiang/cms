@@ -136,32 +136,34 @@ const EnhancedTagSelector: FC<EnhancedTagSelectorProps> = ({
             className={`cursor-pointer transition-all duration-300 hover:shadow-md ${
                 tag.isSelected ? 'ring-2 ring-blue-500 bg-blue-50' : 'hover:shadow-lg'
             }`}
-            bodyStyle={{ padding: compact ? '12px' : '16px' }}
+            bodyStyle={{ padding: compact ? '8px' : '16px' }}
             onClick={() => handleTagSelect(tag.labelZhName)}
         >
             <div className="flex items-start justify-between">
-                <div className="flex-1">
-                    <div className="flex items-center space-x-2 mb-2">
-                        <span className={`text-${compact ? 'sm' : 'base'} font-medium text-gray-800`}>
+                <div className="flex-1 min-w-0">
+                    <div className="flex items-center space-x-1 mb-1">
+                        <span className={`${compact ? 'text-xs' : 'text-base'} font-medium text-gray-800 truncate`}>
                             {tag.labelZhName}
                         </span>
                         {tag.isSelected && (
-                            <CheckOutlined className="text-blue-500 text-sm" />
+                            <CheckOutlined className="text-blue-500 text-xs flex-shrink-0" />
                         )}
                     </div>
-                    <div className="flex items-center space-x-2">
+                    <div className="flex items-center space-x-1">
                         <Badge
                             color={TYPE_COLORS[tag.type]}
                             text={TYPE_LABELS[tag.type]}
                         />
-                        <span className="text-xs text-gray-500">
-                            {tag.typeZhName}
-                        </span>
+                        {!compact && (
+                            <span className="text-xs text-gray-500">
+                                {tag.typeZhName}
+                            </span>
+                        )}
                     </div>
                 </div>
-                <div className="flex items-center space-x-1">
+                <div className="flex items-center space-x-1 flex-shrink-0">
                     {!tag.isSelected && (
-                        <PlusOutlined className="text-gray-400 text-sm" />
+                        <PlusOutlined className="text-gray-400 text-xs" />
                     )}
                 </div>
             </div>
@@ -187,9 +189,9 @@ const EnhancedTagSelector: FC<EnhancedTagSelectorProps> = ({
             children: (
                 <div className="p-2">
                     {tags.length > 0 ? (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="grid grid-cols-2 gap-2">
                             {tags.map(tag => (
-                                <TagCard key={tag.id} tag={tag} />
+                                <TagCard key={tag.id} tag={tag} compact={true} />
                             ))}
                         </div>
                     ) : (
@@ -231,11 +233,11 @@ const EnhancedTagSelector: FC<EnhancedTagSelectorProps> = ({
             children: (
                 <div className="p-2">
                     {tags.length > 0 ? (
-                        <div className="grid grid-cols-1 gap-3">
+                        <div className="grid grid-cols-1 gap-2">
                             {tags.map(tag => (
                                 <div
                                     key={tag.id}
-                                    className={`p-3 rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-md ${
+                                    className={`p-2 rounded-lg border cursor-pointer transition-all duration-200 hover:shadow-md ${
                                         tag.isSelected 
                                             ? 'border-blue-500 bg-blue-50 shadow-sm' 
                                             : 'border-gray-200 hover:border-blue-300'
@@ -243,23 +245,23 @@ const EnhancedTagSelector: FC<EnhancedTagSelectorProps> = ({
                                     onClick={() => handleTagSelect(tag.labelZhName)}
                                 >
                                     <div className="flex items-center justify-between">
-                                        <div className="flex items-center space-x-3">
+                                        <div className="flex items-center space-x-2">
                                             <div className={`w-2 h-2 rounded-full ${
                                                 tag.isSelected ? 'bg-blue-500' : 'bg-gray-300'
                                             }`} />
                                             <div>
-                                                <div className="font-medium text-gray-800 text-sm">
+                                                <div className="font-medium text-gray-800 text-xs">
                                                     {tag.labelZhName}
                                                 </div>
                                             </div>
                                         </div>
-                                        <div className="flex items-center space-x-2">
+                                        <div className="flex items-center space-x-1">
                                             <Badge
                                                 color={TYPE_COLORS[tag.type]}
                                                 text={TYPE_LABELS[tag.type]}
                                             />
                                             {tag.isSelected && (
-                                                <CheckOutlined className="text-blue-500 text-sm" />
+                                                <CheckOutlined className="text-blue-500 text-xs" />
                                             )}
                                         </div>
                                     </div>
@@ -297,58 +299,42 @@ const EnhancedTagSelector: FC<EnhancedTagSelectorProps> = ({
             }
             open={open}
             onClose={onClose}
-            width={720}
+            width="30%"
             placement="left"
             className="enhanced-tag-selector"
             bodyStyle={{ padding: 0 }}
         >
             <div className="h-full flex flex-col">
                 {/* 搜索和过滤栏 */}
-                <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
-                    <Space direction="vertical" size="middle" className="w-full">
-                        <div className="flex items-center space-x-4">
+                <div className="p-4 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-purple-50">
+                    <Space direction="vertical" size="small" className="w-full">
+                        <div className="flex items-center space-x-2">
                             <div className="flex-1">
                                 <Input
-                                    placeholder="搜索标签名称..."
+                                    placeholder="搜索标签..."
                                     prefix={<SearchOutlined className="text-gray-400" />}
                                     value={searchTerm}
                                     onChange={(e) => setSearchTerm(e.target.value)}
                                     allowClear
-                                    size="large"
+                                    size="small"
                                 />
                             </div>
                             <Button
                                 icon={<FilterOutlined />}
                                 onClick={handleClearSearch}
-                                size="large"
+                                size="small"
                             >
                                 清除
                             </Button>
                         </div>
                         
-                        <div className="space-y-3">
+                        <div className="space-y-2">
                             <div className="flex items-center justify-between">
-                                <div className="flex items-center space-x-2">
-                                    <span className="text-sm font-medium text-gray-700">分类筛选:</span>
+                                <div className="flex items-center space-x-1">
+                                    <span className="text-xs font-medium text-gray-700">分类:</span>
                                     <Badge count={filteredAndSortedTags.length} />
                                 </div>
-                                <div className="flex items-center space-x-2">
-                                    <Tooltip title="排序方式">
-                                        <Radio.Group
-                                            value={sortBy}
-                                            onChange={(e) => setSortBy(e.target.value)}
-                                            size="small"
-                                        >
-                                            <Radio.Button value="category">
-                                                <SortAscendingOutlined />
-                                            </Radio.Button>
-                                            <Radio.Button value="name">名称</Radio.Button>
-                                            <Radio.Button value="order">顺序</Radio.Button>
-                                        </Radio.Group>
-                                    </Tooltip>
-                                    
-                                    <Divider type="vertical" />
-                                    
+                                <div className="flex items-center space-x-1">
                                     <Tooltip title="视图模式">
                                         <Radio.Group
                                             value={viewMode}
@@ -366,15 +352,14 @@ const EnhancedTagSelector: FC<EnhancedTagSelectorProps> = ({
                                 </div>
                             </div>
                             
-                            <div className="flex flex-wrap gap-2">
+                            <div className="flex flex-wrap gap-1">
                                 <Button
                                     type={selectedCategory === 'all' ? 'primary' : 'default'}
                                     size="small"
                                     onClick={() => setSelectedCategory('all')}
-                                    className="flex items-center"
+                                    className="text-xs"
                                 >
-                                    <span>全部</span>
-                                    <Badge count={processedTags.length} size="small" className="ml-1" />
+                                    全部({processedTags.length})
                                 </Button>
                                 {categories.map(cat => {
                                     const categoryCount = processedTags.filter(tag => tag.typeZhName === cat).length
@@ -384,10 +369,9 @@ const EnhancedTagSelector: FC<EnhancedTagSelectorProps> = ({
                                             type={selectedCategory === cat ? 'primary' : 'default'}
                                             size="small"
                                             onClick={() => setSelectedCategory(cat)}
-                                            className="flex items-center"
+                                            className="text-xs"
                                         >
-                                            <span>{cat}</span>
-                                            <Badge count={categoryCount} size="small" className="ml-1" />
+                                            {cat}({categoryCount})
                                         </Button>
                                     )
                                 })}
@@ -397,7 +381,7 @@ const EnhancedTagSelector: FC<EnhancedTagSelectorProps> = ({
                 </div>
 
                 {/* 标签内容区 */}
-                <div className="flex-1 overflow-auto p-6">
+                <div className="flex-1 overflow-auto p-3">
                     {filteredAndSortedTags.length > 0 ? (
                         <div className="space-y-6">
                             {viewMode === 'grid' ? renderGridView() : renderListView()}
@@ -422,17 +406,17 @@ const EnhancedTagSelector: FC<EnhancedTagSelectorProps> = ({
                 </div>
 
                 {/* 底部操作栏 */}
-                <div className="p-4 border-t border-gray-200 bg-gray-50">
+                <div className="p-3 border-t border-gray-200 bg-gray-50">
                     <div className="flex items-center justify-between">
-                        <div className="text-sm text-gray-600">
-                            已选择 <span className="font-medium text-blue-600">{selectedNames.length}</span> 个标签
+                        <div className="text-xs text-gray-600">
+                            已选 <span className="font-medium text-blue-600">{selectedNames.length}</span> 个
                             {filteredAndSortedTags.length > 0 && (
-                                <span className="ml-2">
-                                    / 共 <span className="font-medium">{filteredAndSortedTags.length}</span> 个可用
+                                <span className="ml-1">
+                                    / 共 <span className="font-medium">{filteredAndSortedTags.length}</span> 个
                                 </span>
                             )}
                         </div>
-                        <Button type="primary" onClick={onClose} size="large">
+                        <Button type="primary" onClick={onClose} size="small">
                             确定
                         </Button>
                     </div>

@@ -1,0 +1,312 @@
+/* 
+ * 第三方组件样式覆盖文件
+ * 用于覆盖 Ant Design Pro 和 Ant Design 组件的默认样式
+ */
+
+:root {
+    /* 主题色变量 */
+    --primary-gradient: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    --secondary-gradient: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    --success-gradient: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    
+    /* 间距变量 */
+    --form-item-margin: 16px;
+    --modal-padding: 24px;
+    --drawer-padding: 24px;
+    
+    /* 颜色变量 */
+    --text-primary: #1f2937;
+    --text-secondary: #6b7280;
+    --border-color: #e5e7eb;
+    --border-radius: 8px;
+}
+
+/* ==================== Modal 相关样式 ==================== */
+
+/* 保存画像弹窗 */
+.save-profile-modal .ant-modal-header {
+    padding: 0;
+    border-bottom: none;
+    background: transparent;
+}
+
+.save-profile-modal .ant-modal-body {
+    padding: var(--modal-padding);
+}
+
+.save-profile-modal .ant-form-item {
+    margin-bottom: 0;
+}
+
+.save-profile-modal .ant-form-item-label {
+    padding: 0;
+    line-height: 32px;
+}
+
+.save-profile-modal .ant-form-item-control {
+    line-height: 32px;
+}
+
+/* 增强型弹窗通用样式 */
+.enhanced-modal .ant-modal-content {
+    border-radius: var(--border-radius);
+    overflow: hidden;
+}
+
+.enhanced-modal .ant-modal-header {
+    background: var(--primary-gradient);
+    border-bottom: none;
+    padding: var(--modal-padding);
+}
+
+.enhanced-modal .ant-modal-title {
+    color: white;
+    font-weight: 600;
+}
+
+.enhanced-modal .ant-modal-close {
+    color: white;
+}
+
+.enhanced-modal .ant-modal-close:hover {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+/* ==================== Drawer 相关样式 ==================== */
+
+/* 增强型抽屉通用样式 */
+.enhanced-drawer .ant-drawer-header {
+    background: var(--primary-gradient);
+    border-bottom: none;
+    padding: var(--drawer-padding);
+}
+
+.enhanced-drawer .ant-drawer-title {
+    color: white;
+    font-weight: 600;
+}
+
+.enhanced-drawer .ant-drawer-close {
+    color: white;
+}
+
+.enhanced-drawer .ant-drawer-close:hover {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.enhanced-drawer .ant-drawer-body {
+    padding: var(--drawer-padding);
+}
+
+/* ==================== Form 相关样式 ==================== */
+
+/* ProForm 组件通用样式 */
+.enhanced-form .ant-form-item {
+    margin-bottom: var(--form-item-margin);
+}
+
+.enhanced-form .ant-form-item-label > label {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.enhanced-form .ant-form-item-label > label.ant-form-item-required:not(.ant-form-item-required-mark-optional)::before {
+    color: #ff4d4f;
+}
+
+/* ProFormText 输入框样式 */
+.enhanced-input .ant-input {
+    border-radius: var(--border-radius);
+    border-color: var(--border-color);
+    transition: all 0.2s;
+}
+
+.enhanced-input .ant-input:focus,
+.enhanced-input .ant-input-focused {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.enhanced-input .ant-input:hover {
+    border-color: #667eea;
+}
+
+/* ==================== Select 相关样式 ==================== */
+
+/* ProFormSelect 下拉框样式 */
+.enhanced-select .ant-select-selector {
+    border-radius: var(--border-radius);
+    border-color: var(--border-color);
+}
+
+.enhanced-select .ant-select-focused .ant-select-selector {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.enhanced-select .ant-select:hover .ant-select-selector {
+    border-color: #667eea;
+}
+
+/* ==================== Button 相关样式 ==================== */
+
+/* 渐变按钮样式 */
+.gradient-button {
+    background: var(--primary-gradient);
+    border: none;
+    color: white;
+    border-radius: var(--border-radius);
+    transition: all 0.3s;
+}
+
+.gradient-button:hover {
+    background: var(--primary-gradient);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+}
+
+.gradient-button:active {
+    transform: translateY(0);
+}
+
+/* ==================== Card 相关样式 ==================== */
+
+/* 增强型卡片样式 */
+.enhanced-card .ant-card-head {
+    background: var(--primary-gradient);
+    border-bottom: none;
+}
+
+.enhanced-card .ant-card-head-title {
+    color: white;
+    font-weight: 600;
+}
+
+.enhanced-card .ant-card-body {
+    padding: var(--modal-padding);
+}
+
+/* ==================== Table 相关样式 ==================== */
+
+/* ProTable 表格样式 */
+.enhanced-table .ant-table-thead > tr > th {
+    background: #f8fafc;
+    border-bottom: 2px solid #e5e7eb;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.enhanced-table .ant-table-tbody > tr:hover > td {
+    background: #f0f9ff;
+}
+
+/* ==================== DatePicker 相关样式 ==================== */
+
+/* ProFormDatePicker 日期选择器样式 */
+.enhanced-date-picker .ant-picker {
+    border-radius: var(--border-radius);
+    border-color: var(--border-color);
+}
+
+.enhanced-date-picker .ant-picker:hover {
+    border-color: #667eea;
+}
+
+.enhanced-date-picker .ant-picker-focused {
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+/* ==================== Checkbox/Radio 相关样式 ==================== */
+
+/* ProFormCheckbox 复选框样式 */
+.enhanced-checkbox .ant-checkbox-wrapper:hover .ant-checkbox-inner,
+.enhanced-checkbox .ant-checkbox:hover .ant-checkbox-inner {
+    border-color: #667eea;
+}
+
+.enhanced-checkbox .ant-checkbox-checked .ant-checkbox-inner {
+    background-color: #667eea;
+    border-color: #667eea;
+}
+
+/* ProFormRadio 单选框样式 */
+.enhanced-radio .ant-radio-wrapper:hover .ant-radio-inner {
+    border-color: #667eea;
+}
+
+.enhanced-radio .ant-radio-checked .ant-radio-inner {
+    border-color: #667eea;
+}
+
+.enhanced-radio .ant-radio-checked .ant-radio-inner::after {
+    background-color: #667eea;
+}
+
+/* ==================== 响应式样式 ==================== */
+
+@media (max-width: 768px) {
+    .enhanced-modal .ant-modal-body,
+    .enhanced-drawer .ant-drawer-body {
+        padding: 16px;
+    }
+    
+    .enhanced-form .ant-form-item {
+        margin-bottom: 12px;
+    }
+}
+
+/* ==================== 动画效果 ==================== */
+
+.fade-in {
+    animation: fadeIn 0.3s ease-in-out;
+}
+
+@keyframes fadeIn {
+    from {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.slide-in {
+    animation: slideIn 0.3s ease-in-out;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateX(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+/* ==================== 工具类样式 ==================== */
+
+/* 隐藏默认的表单项标签 */
+.no-label .ant-form-item-label {
+    display: none;
+}
+
+/* 紧凑的表单项间距 */
+.compact-form .ant-form-item {
+    margin-bottom: 8px;
+}
+
+/* 无边框输入框 */
+.borderless-input .ant-input {
+    border: none;
+    background: #f8fafc;
+    border-radius: var(--border-radius);
+}
+
+.borderless-input .ant-input:focus {
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}

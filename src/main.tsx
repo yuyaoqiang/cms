@@ -1,4 +1,5 @@
 import './index.css'
+import './styles/component-overrides.css'
 import { IS_PROD } from '@/constants'
 import Root from '@/pages/root'
 import { useStore } from '@/stores'

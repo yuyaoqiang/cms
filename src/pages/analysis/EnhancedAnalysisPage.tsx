@@ -193,121 +193,7 @@ const EnhancedAnalysisPage: FC = () => {
                 setPageLoading(true)
                 
                 // 模拟API调用
-                const response = {
-                    total: 0,
-                    current: 1,
-                    code: 200,
-                    size: 10,
-                    records: {
-                        data: [
-                            {
-                                labelZhName: '用户来源',
-                                createdAt: 1751357838000,
-                                labelId: 1,
-                                labelFieldName: 'member_source',
-                                typeZhName: '用户基础标签',
-                                id: 1,
-                                type: 1,
-                                widgetType: 1,
-                                order: 1,
-                                updatedAt: 1751444764000,
-                                status: 1
-                            },
-                            {
-                                labelZhName: '注册时间',
-                                createdAt: 1751357838000,
-                                labelId: 2,
-                                labelFieldName: 'created_at',
-                                typeZhName: '用户基础标签',
-                                id: 2,
-                                type: 1,
-                                widgetType: 3,
-                                order: 2,
-                                updatedAt: 1751444764000,
-                                status: 1
-                            },
-                            {
-                                labelZhName: '年龄分布',
-                                createdAt: 1751357838000,
-                                labelId: 3,
-                                labelFieldName: 'age',
-                                typeZhName: '用户基础标签',
-                                id: 3,
-                                type: 1,
-                                widgetType: 4,
-                                order: 3,
-                                updatedAt: 1751444764000,
-                                status: 1
-                            },
-                            {
-                                labelZhName: '性别分布',
-                                createdAt: 1751357838000,
-                                labelId: 4,
-                                labelFieldName: 'sex',
-                                typeZhName: '用户基础标签',
-                                id: 4,
-                                type: 1,
-                                widgetType: 2,
-                                order: 4,
-                                updatedAt: 1751444764000,
-                                status: 1
-                            },
-                            {
-                                labelZhName: 'VIP等级',
-                                createdAt: 1751357838000,
-                                labelId: 5,
-                                labelFieldName: 'member_grade',
-                                typeZhName: '用户业务基础标签',
-                                id: 5,
-                                type: 2,
-                                widgetType: 1,
-                                order: 5,
-                                updatedAt: 1751444764000,
-                                status: 1
-                            },
-                            {
-                                labelZhName: '钱包余额分布',
-                                createdAt: 1751357838000,
-                                labelId: 6,
-                                labelFieldName: 'wallet_balance',
-                                typeZhName: '用户业务基础标签',
-                                id: 6,
-                                type: 2,
-                                widgetType: 4,
-                                order: 6,
-                                updatedAt: 1751444764000,
-                                status: 1
-                            },
-                            {
-                                labelZhName: '活跃状态',
-                                createdAt: 1751357838000,
-                                labelId: 7,
-                                labelFieldName: 'is_7_active',
-                                typeZhName: '用户业务行为标签',
-                                id: 7,
-                                type: 3,
-                                widgetType: 2,
-                                order: 7,
-                                updatedAt: 1751444764000,
-                                status: 1
-                            },
-                            {
-                                labelZhName: '风控状态',
-                                createdAt: 1751357838000,
-                                labelId: 8,
-                                labelFieldName: 'is_black',
-                                typeZhName: '用户风控标签',
-                                id: 8,
-                                type: 4,
-                                widgetType: 2,
-                                order: 8,
-                                updatedAt: 1751444764000,
-                                status: 1
-                            }
-                        ]
-                    }
-                }
-
+                const response = await post('reportApi/userprofile/api/labels')
                 if (response?.records?.data) {
                     setApiTags(response.records.data)
                     message.success(`加载成功，共获取${response.records.data.length}个标签`)
@@ -457,14 +343,14 @@ const EnhancedAnalysisPage: FC = () => {
     // 原有的表单处理逻辑
     const currentDef: UserTagDefinition | undefined = userTags.find(t => t.name === currentTagName)
     const getDrawerWidth = () => {
-        if (!currentDef) return 520
+        if (!currentDef) return 420
         switch (currentDef.type) {
-            case 'dateRange': return 720
-            case 'numberRange': return 520
+            case 'dateRange': return 640  // 确保日期范围组件及其弹出层能正常显示
+            case 'numberRange': return 420
             case 'multi':
-            case 'single': return 600
-            case 'text': return 520
-            default: return 520
+            case 'single': return 480
+            case 'text': return 420
+            default: return 420
         }
     }
 
@@ -867,18 +753,45 @@ const EnhancedAnalysisPage: FC = () => {
                 onFinish={handleSaveProfile}
                 modalProps={{ 
                     destroyOnClose: true,
-                    className: 'enhanced-modal'
+                    className: 'save-profile-modal',
+                    width: 480
                 }}
             >
-                <ProFormText
-                    name="name"
-                    label="画像名称"
-                    placeholder="请输入画像名称，如：高价值用户群体"
-                    rules={[{ required: true, message: '请输入画像名称' }]}
-                />
-                <div className="text-sm text-gray-500 mt-2">
-                    当前画像包含 {selectedTags.length} 个标签，预估用户数量：
-                    {enhancedStats.totalUsers.toLocaleString()} 人
+                <div className="space-y-4">
+                    <div className="flex items-center space-x-4">
+                        <label className="text-sm font-medium text-gray-700 whitespace-nowrap w-20 flex-shrink-0">
+                            画像名称
+                        </label>
+                        <div className="flex-1">
+                            <ProFormText
+                                name="name"
+                                style={{marginBottom: 0}}
+                                placeholder="请输入画像名称，如：高价值用户群体"
+                                rules={[{ required: true, message: '请输入画像名称' }]}
+                                className="enhanced-input"
+                                fieldProps={{
+                                    className: 'w-full'
+                                }}
+                            />
+                        </div>
+                    </div>
+                    <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded-lg">
+                        <div className="mb-2">
+                            当前画像包含 {selectedTags.length} 个标签
+                        </div>
+                        {selectedTags.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                                {selectedTags.map((tag, index) => (
+                                    <span 
+                                        key={index}
+                                        className="inline-flex items-center px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full"
+                                    >
+                                        {tag.name}
+                                    </span>
+                                ))}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </ModalForm>
 
